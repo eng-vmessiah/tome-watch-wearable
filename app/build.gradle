@@ -1,0 +1,32 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'br.vitor.tomewatch'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "br.vitor.tomewatch"
+        minSdk 30          // Wear OS 3+
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // OkHttp for HTTP POST — no other deps, keeps APK tiny
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+}
