@@ -50,7 +50,7 @@ public class MainActivity extends android.app.Activity {
         status = new TextView(this);
         status.setTextSize(22);
         status.setPadding(30, 70, 30, 30);
-        status.setText("Tome Watch\n1x↓=scroll ↓  2x↓=next\n1x↑=scroll ↑  2x↑=prev");
+        status.setText("Tome Watch\n1x↓=↑  2x↓=prev\n1x↑=↓  2x↑=next");
         setContentView(status);
 
         http = new OkHttpClient.Builder()
