@@ -106,7 +106,7 @@ public class MainActivity extends android.app.Activity {
         else { inSettings = true; detector.stop(); openSettings(); }
     }
 
-    @Override protected void onResume() { if (!inSettings) detector.start(); }
+    @Override protected void onResume() { super.onResume(); if (!inSettings) detector.start(); }
     @Override protected void onPause()  { super.onPause();  detector.stop();  }
 
     private void updateUi(String action) {
