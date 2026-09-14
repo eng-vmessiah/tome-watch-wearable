@@ -1,4 +1,4 @@
-#Sun Sep 13 23:00:23 BRT 2026
+#Mon Sep 14 11:00:38 BRT 2026
 base.2=/home/vitor/project/tome-watch-wearable/app/build/intermediates/dex/debug/mergeProjectDexDebug/3/classes.dex
 path.2=3/classes.dex
 base.1=/home/vitor/project/tome-watch-wearable/app/build/intermediates/dex/debug/mergeProjectDexDebug/0/classes.dex

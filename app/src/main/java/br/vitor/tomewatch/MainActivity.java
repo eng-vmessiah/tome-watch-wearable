@@ -48,7 +48,9 @@ public class MainActivity extends android.app.Activity {
     private OkHttpClient http;
     private TextView status;
     private boolean invertScroll = false, invertPair = false;
-    private String serverUrl, tokenVal;
+    private String serverUrl;
+    private String sessionToken = null;    // current session (per spec: token via create; NOT the tokenVal settings label)
+    private boolean inSession = false;
     private FlickDetector detector;
     private String lastAction = "-";
     private int sent = 0;
@@ -64,7 +66,7 @@ public class MainActivity extends android.app.Activity {
         invertScroll = prefs.getBoolean("invert_scroll", false);
         invertPair = prefs.getBoolean("invert_pair", false);
         serverUrl = prefs.getString("server", SERVER);
-        tokenVal = prefs.getString("token", TOKEN);
+        sessionToken = prefs.getString("last_token", null);
         if (liveHint != null) refreshMainHint();
 
         status.setOnLongClickListener(v -> { openSettings(); return true; });
@@ -130,22 +132,38 @@ public class MainActivity extends android.app.Activity {
         buzz(20);
         String body = "{\"action\":\"" + action + "\"}";
         Request req = new Request.Builder()
-                .url(serverUrl + "/api/watch/" + tokenVal)
+                .url(serverUrl + "/api/watch/" + sessionToken)
+                .header("Authorization", "Bearer " + sessionToken)
                 .post(RequestBody.create(body, JSON))
                 .build();
         http.newCall(req).enqueue(new okhttp3.Callback() {
             @Override public void onFailure(Call call, IOException e) {
                 Log.d(TAG, "POST FAILED", e);
-                runOnUiThread(() -> {
-                    liveAction.setText("✗ " + e.getClass().getSimpleName());
-                    liveCount.setTextColor(Color.parseColor("#e07e7e"));
-                    liveCount.setText("falha de rede · último: " + lastAction);
-                });
+                if (call.isExecuted()) {
+                    runOnUiThread(() -> {
+                        liveAction.setText("✗ " + e.getClass().getSimpleName());
+                        liveCount.setTextColor(Color.parseColor("#e07e7e"));
+                        liveCount.setText("falha de rede · último: " + lastAction);
+                    });
+                } else {
+                    // silent single retry
+                    http.newCall(call.request()).enqueue(this);
+                }
             }
             @Override public void onResponse(Call call, Response res) throws IOException {
                 int code = res.code();
                 res.close();
                 Log.d(TAG, "POST RESP " + code);
+                if (code == 404) {
+                    // session expired per spec: surface New session, don't die
+                    sessionToken = null;
+                    runOnUiThread(() -> {
+                        liveAction.setText("sessão expirou");
+                        liveCount.setTextColor(Color.parseColor("#e07e7e"));
+                        liveCount.setText("toque no rodapé p/ nova sessão");
+                        refreshSessionRow();
+                    });
+                }
             }
         });
     }
@@ -192,9 +210,32 @@ public class MainActivity extends android.app.Activity {
         liveHint.setPadding(0, dp(14), 0, 0);
         mainScreen.addView(liveHint);
 
-        status = liveAction;   // failures write here too
+        TextView sessionRow = new TextView(this);
+        sessionRow.setId(View.generateViewId());
+        sessionRow.setGravity(android.view.Gravity.CENTER);
+        sessionRow.setTextColor(Color.parseColor("#6fa8dc"));
+        sessionRow.setTextSize(15);
+        sessionRow.setPadding(0, dp(10), 0, 0);
+        sessionRow.setOnClickListener(v -> openSessionScreen());
+        mainScreen.addView(sessionRow);
+        sessionRowRef = sessionRow;
+        refreshSessionRow();
+
+        status = liveAction;
         setContentView(mainScreen);
         refreshMainHint();
+    }
+
+    private TextView sessionRowRef;
+
+    private void refreshSessionRow() {
+        if (sessionRowRef == null) return;
+        String last = getSharedPreferences("tome", MODE_PRIVATE)
+                .getString("last_token", null);
+        sessionRowRef.setText(sessionToken != null
+                ? "sessão: " + sessionToken.substring(0, 4) + "… (tocar p/ nova)"
+                : (last != null ? "retomar sessão " + last.substring(0, 4) + "…"
+                                : "+ nova sessão"));
     }
 
     private void refreshMainHint() {
@@ -202,6 +243,149 @@ public class MainActivity extends android.app.Activity {
         String pair = invertPair ? "prev" : "next";
         liveHint.setText("1x↓ rola " + (invertScroll ? "↑" : "↓") + "   •   2x↓ " + pair +
             "\nsegura p/ config");
+    }
+
+    // ============ SESSION FLOW ============
+    private void openSessionScreen() {
+        if (sessionToken == null) {
+            String last = getSharedPreferences("tome", MODE_PRIVATE).getString("last_token", null);
+            if (last != null) { sessionToken = last; }
+        }
+        if (sessionToken != null) {
+            showSessionReady(sessionToken);
+            return;
+        }
+        inSession = true;
+        detector.stop();
+        createSession();
+    }
+
+    private void createSession() {
+        TextView t = new TextView(this);
+        t.setGravity(android.view.Gravity.CENTER);
+        t.setTextColor(Color.WHITE);
+        t.setTextSize(17);
+        t.setPadding(dp(20), dp(40), dp(20), dp(20));
+        t.setText("criando sessão…");
+        setContentView(t);
+
+        okhttp3.Request req = new okhttp3.Request.Builder()
+                .url(serverUrl + "/api/watch/create")
+                .header("Authorization", "Bearer " + (sessionToken == null ? "" : sessionToken))
+                .post(RequestBody.create("{}", JSON))
+                .build();
+        http.newCall(req).enqueue(new okhttp3.Callback() {
+            @Override public void onFailure(okhttp3.Call call, IOException e) {
+                runOnUiThread(() -> sessionError("rede: " + e.getClass().getSimpleName()));
+            }
+            @Override public void onResponse(Call call, Response res) throws IOException {
+                final int code = res.code();
+                final String body1 = res.body() != null ? res.body().string() : "";
+                res.close();
+                runOnUiThread(() -> {
+                    if (code != 200) {
+                        sessionError(code);
+                        return;
+                    }
+                    try {
+                        org.json.JSONObject j = new org.json.JSONObject(body1);
+                        sessionToken = j.getString("token");
+                        SharedPreferences.Editor e = getSharedPreferences("tome", MODE_PRIVATE).edit();
+                        e.putString("last_token", sessionToken);
+                        e.apply();
+                        showSessionReady(sessionToken);
+                    } catch (Exception ex) {
+                        sessionError(ex.getClass().getSimpleName());
+                    }
+                });
+            }
+        });
+    }
+
+    private void sessionError(String what) {
+        TextView t = new TextView(this);
+        t.setGravity(android.view.Gravity.CENTER);
+        t.setTextColor(Color.parseColor("#e07e7e"));
+        t.setTextSize(16);
+        t.setPadding(dp(20), dp(60), dp(20), 0);
+        t.setText(what + "\n\ntocar p/ tentar de novo");
+        t.setOnClickListener(v -> createSession());
+        setContentView(t);
+    }
+
+    private void sessionError(int code) {
+        TextView t = new TextView(this);
+        t.setGravity(android.view.Gravity.CENTER);
+        t.setTextColor(Color.parseColor("#e07e7e"));
+        t.setTextSize(16);
+        t.setPadding(dp(20), dp(60), dp(20), 0);
+        t.setText(code == 302 || code == 401
+                ? "server bloqueou create (auth)\naguarde fix do server\n\ntocar p/ tentar de novo"
+                : "HTTP " + code + "\n\ntocar p/ tentar de novo");
+        t.setOnClickListener(v -> createSession());
+        setContentView(t);
+    }
+
+    private void createSession2() { createSession(); }
+
+    private void showSessionReady(String token) {
+        if (sessionToken == null) sessionToken = sessionToken_placeholder();
+    }
+
+    private String sessionToken_placeholder(){ return null; }
+
+    private void _unused_showSessionReady() {
+        inSession = true;
+        detector.stop();
+        showQr();
+    }
+
+    private void showQr() {
+        // full pairing screen: QR encoding {server}/watch/pair?token={token} + token big
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(android.view.Gravity.CENTER);
+        box.setBackgroundColor(Color.parseColor("#101010"));
+
+        String url = serverUrl + "/watch/pair?token=" + sessionToken;
+        int size = Math.min(340, getResources().getDisplayMetrics().widthPixels);
+        android.widget.ImageView iv = new android.widget.ImageView(this);
+        android.graphics.Bitmap bmp = Qr.encode(url, size);
+        if (bmp != null) {
+            iv.setImageBitmap(bmp);
+            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.gravity = android.view.Gravity.CENTER;
+            lp.setMargins(0, dp(8), 0, 0);
+            iv.setLayoutParams(lp);
+            box.addView(iv);
+        }
+
+        TextView tk = new TextView(this);
+        tk.setText(sessionToken);
+        tk.setTextColor(Color.WHITE);
+        tk.setTextSize(16);
+        tk.setGravity(android.view.Gravity.CENTER);
+        tk.setLetterSpacing(0.15f);
+        box.addView(tk);
+
+        TextView note = new TextView(this);
+        note.setText("escaneie no celular\n(ou escreva o código)");
+        note.setTextColor(Color.parseColor("#8a8a8a"));
+        note.setTextSize(12);
+        note.setGravity(android.view.Gravity.CENTER);
+        box.addView(note);
+
+        TextView back = new TextView(this);
+        back.setText("✓ usar app");
+        back.setTextColor(Color.parseColor("#7ee08a"));
+        back.setTextSize(15);
+        back.setGravity(android.view.Gravity.CENTER);
+        back.setBackgroundResource(R.drawable.pill_on);
+        back.setOnClickListener(v -> { inSession = false; recreate(); });
+        box.addView(back);
+
+        setContentView(box);
     }
 
     private void openSettings() {
@@ -226,7 +410,6 @@ public class MainActivity extends android.app.Activity {
                 new String[]{"2x↓ = próxima", "2x↓ = anterior"},
                 invertPair ? 1 : 0, i -> { invertPair = (i == 1); save(true); }));
         box.addView(editCard("Server", serverUrl, v -> promptEdit("Server URL", serverUrl, s -> { serverUrl = s; save(true); })));
-        box.addView(editCard("Token", tokenVal, v -> promptEdit("Token", tokenVal, s -> { tokenVal = s; save(true); })));
 
         TextView done = new TextView(this);
         done.setText("✓  Voltar");
@@ -339,7 +522,7 @@ public class MainActivity extends android.app.Activity {
             .putBoolean("invert_scroll", invertScroll)
             .putBoolean("invert_pair", invertPair)
             .putString("server", serverUrl)
-            .putString("token", tokenVal)
+            .putString("last_token", sessionToken)
             .apply();
         if (restartUi && inSettings) openSettings(); // re-render settings in place (keeps you there)
         // if NOT in settings (main screen), preferences apply on next recreate() or re-open

@@ -27,6 +27,8 @@ android {
 }
 
 dependencies {
+    implementation 'com.google.zxing:core:3.5.3'   // QR code generation only (no embedded camera)
+
     // OkHttp for HTTP POST — no other deps, keeps APK tiny
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 }
