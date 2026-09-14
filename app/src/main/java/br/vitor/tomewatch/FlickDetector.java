@@ -21,7 +21,7 @@ public class FlickDetector {
     public interface Callback { void onFlick(Flick f); }
     public enum Flick { OUT, IN, DOWN, UP }
 
-    private static final float MAG = 12f;   // rad/s spike threshold
+    private float mag = 12f;   // rad/s spike threshold (set via setSensitivity)
     private static final long DEBOUNCE_MS = 600;
     private static final long RESET_MS = 350; // window for peak. simple single-spike
 
@@ -32,6 +32,13 @@ public class FlickDetector {
     public FlickDetector(SensorManager sm, Callback cb) {
         this.sm = sm;
         this.cb = cb;
+    }
+
+    /** sensitivity: 1=low (20 rad/s), 2=medium (12), 3=high (7) */
+    public void setSensitivity(int s) {
+        if (s <= 1) mag = 18f;
+        else if (s >= 3) mag = 7.5f;
+        else mag = 12f;
     }
 
     public void start() {
@@ -59,9 +66,9 @@ public class FlickDetector {
             float ax = Math.abs(x), ay = Math.abs(y);
 
             Flick flick = null;
-            if (ay > MAG && ay > ax * 1.4f) {
+            if (ay > mag && ay > ax * 1.4f) {
                 flick = (y < 0) ? Flick.OUT : Flick.IN;
-            } else if (ax > MAG && ax > ay * 1.4f) {
+            } else if (ax > mag && ax > ay * 1.4f) {
                 flick = (x > 0) ? Flick.DOWN : Flick.UP;
             }
             if (flick != null) {

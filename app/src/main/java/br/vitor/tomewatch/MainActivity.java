@@ -47,11 +47,12 @@ public class MainActivity extends android.app.Activity {
 
     private OkHttpClient http;
     private TextView status;
-    private boolean invertScroll = false, invertPair = false;
+    private String mapDown, mapUp, map2Down, map2Up;
     private String serverUrl;
     private String sessionToken = null;    // current session (per spec: token via create; NOT the tokenVal settings label)
     private boolean inSession = false;
     private FlickDetector detector;
+    private String gestureSource = "gyro";
     private String lastAction = "-";
     private int sent = 0;
     private boolean lastFlickWasDown = false, lastFlickWasUp = false;
@@ -63,13 +64,18 @@ public class MainActivity extends android.app.Activity {
         buildMainScreen();
 
         SharedPreferences prefs = getSharedPreferences("tome", MODE_PRIVATE);
-        invertScroll = prefs.getBoolean("invert_scroll", false);
-        invertPair = prefs.getBoolean("invert_pair", false);
+        mapDown  = prefs.getString(Settings.K_MAP_DOWN,  "scroll-down");
+        mapUp    = prefs.getString(Settings.K_MAP_UP,    "scroll-up");
+        map2Down = prefs.getString(Settings.K_MAP_2DOWN, "next");
+        map2Up   = prefs.getString(Settings.K_MAP_2UP,   "prev");
         serverUrl = prefs.getString("server", SERVER);
         sessionToken = prefs.getString("last_token", null);
         if (liveHint != null) refreshMainHint();
 
-        status.setOnLongClickListener(v -> { openSettings(); return true; });
+        status.setOnLongClickListener(v -> {
+            openSettingsRoot();
+            return true;
+        });
 
         http = new OkHttpClient.Builder()
                 .connectTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
@@ -77,6 +83,9 @@ public class MainActivity extends android.app.Activity {
                 .build();
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        int sens = prefs.getInt(Settings.K_SENS, 2);
+        gestureSource = prefs.getString(Settings.K_SOURCE, "gyro");
 
         detector = new FlickDetector((SensorManager) getSystemService(Context.SENSOR_SERVICE),
                 flick -> {
@@ -88,15 +97,14 @@ public class MainActivity extends android.app.Activity {
                         boolean sameAsLast = (isDown && lastFlickWasDown) || (isUp && lastFlickWasUp);
                         boolean withinWindow = (now - lastFlickAt) < 1000;
                         if (sameAsLast && withinWindow) {
-                            boolean pairDown = (isDown != invertPair);
-                            action = pairDown ? "next" : "prev";
+                            action = isDown ? map2Down : map2Up;
                             lastFlickAt = 0; // consume pair
                         } else {
-                            boolean down = (isDown != invertScroll);
-                            action = down ? "scroll-down" : "scroll-up";
+                            action = isDown ? mapDown : mapUp;
                             lastFlickWasDown = isDown; lastFlickWasUp = isUp;
                             lastFlickAt = now;
                         }
+                        if ("none".equals(action)) return; // gesture disabled
                         Log.d(TAG, "FLICK " + flick + " -> " + action);
                         updateUi(action);
                         sendAction(action);
@@ -105,14 +113,42 @@ public class MainActivity extends android.app.Activity {
     }
 
     private boolean inSettings = false;
+    private Settings settings;
 
     @Override
     public void onBackPressed() {
         if (inSettings) { inSettings = false; recreate(); }
-        else { inSettings = true; detector.stop(); openSettings(); }
+        else { openSettingsRoot(); }
     }
 
-    @Override protected void onResume() { super.onResume(); if (!inSettings) detector.start(); }
+    private void openSettingsRoot() {
+        inSettings = true;
+        if (detector != null) detector.stop();
+        settings = new Settings(this, () -> { inSettings = false; recreate(); });
+        settings.root();
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (inSettings) return;
+        if (!"wearable".equals(gestureSource)) detector.start();
+    }
+
+    /** Wrist-gesture keyevents (opt-in; One UI 8 may not deliver — sensor path is primary). */
+    @Override
+    public boolean onKeyDown(int keyCode, android.view.KeyEvent event) {
+        if ("wearable".equals(gestureSource)) {
+            String fromKey = null;
+            if (keyCode == android.view.KeyEvent.KEYCODE_NAVIGATE_NEXT) fromKey = "next";
+            else if (keyCode == android.view.KeyEvent.KEYCODE_NAVIGATE_PREVIOUS) fromKey = "prev";
+            if (fromKey != null) {
+                updateUi(fromKey);
+                sendAction(fromKey);
+                return true;
+            }
+        }
+        return super.onKeyDown(keyCode, event);
+    }
     @Override protected void onPause()  { super.onPause();  detector.stop();  }
 
     private void updateUi(String action) {
@@ -155,12 +191,14 @@ public class MainActivity extends android.app.Activity {
                 res.close();
                 Log.d(TAG, "POST RESP " + code);
                 if (code == 404) {
-                    // session expired per spec: surface New session, don't die
+                    // 404 = token unknown to THAT server. Show WHICH server answered
+                    // so a config mismatch (wrong origin/expiry) is visible at a glance.
                     sessionToken = null;
+                    final String host = serverUrl.replaceFirst("^https?://", "").replaceFirst("/$", "");
                     runOnUiThread(() -> {
-                        liveAction.setText("sessão expirou");
+                        liveAction.setText("sessão expirada");
                         liveCount.setTextColor(Color.parseColor("#e07e7e"));
-                        liveCount.setText("toque no rodapé p/ nova sessão");
+                        liveCount.setText(host + "\ntoque no rodapé p/ nova sessão");
                         refreshSessionRow();
                     });
                 }
@@ -179,13 +217,14 @@ public class MainActivity extends android.app.Activity {
         mainScreen.setGravity(android.view.Gravity.CENTER);
         mainScreen.setBackgroundColor(Color.parseColor("#101010"));
         int pad = dp(10);
-        mainScreen.setPadding(dp(16), pad, dp(16), pad);
+        mainScreen.setPadding(dp(16), dp(4), dp(16), dp(0));
 
         TextView title = new TextView(this);
         title.setText("📖  Tome Watch");
         title.setTextColor(Color.parseColor("#c9b86e"));
         title.setTextSize(18);
         title.setGravity(android.view.Gravity.CENTER);
+        title.setPadding(0, 0, 0, dp(2));
         mainScreen.addView(title);
 
         liveAction = new TextView(this);
@@ -193,7 +232,7 @@ public class MainActivity extends android.app.Activity {
         liveAction.setTextColor(Color.WHITE);
         liveAction.setTextSize(24);
         liveAction.setGravity(android.view.Gravity.CENTER);
-        liveAction.setPadding(0, dp(14), 0, dp(3));
+        liveAction.setPadding(0, dp(8), 0, dp(2));
         mainScreen.addView(liveAction);
 
         liveCount = new TextView(this);
@@ -206,8 +245,8 @@ public class MainActivity extends android.app.Activity {
         liveHint = new TextView(this);
         liveHint.setGravity(android.view.Gravity.CENTER);
         liveHint.setTextColor(Color.parseColor("#555555"));
-        liveHint.setTextSize(12);
-        liveHint.setPadding(0, dp(8), 0, 0);
+        liveHint.setTextSize(11);
+        liveHint.setPadding(0, dp(4), 0, 0);
         mainScreen.addView(liveHint);
 
         TextView sessionRow = new TextView(this);
@@ -220,9 +259,9 @@ public class MainActivity extends android.app.Activity {
         LinearLayout.LayoutParams srl = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         srl.gravity = android.view.Gravity.CENTER_HORIZONTAL;
-        srl.setMargins(0, dp(12), 0, 0);
+        srl.setMargins(0, dp(5), 0, 0);
         sessionRow.setLayoutParams(srl);
-        sessionRow.setOnClickListener(v -> openSessionScreen());
+        sessionRow.setOnClickListener(v -> openSessionScreen(false));
         mainScreen.addView(sessionRow);
         sessionRowRef = sessionRow;
 
@@ -236,11 +275,10 @@ public class MainActivity extends android.app.Activity {
         LinearLayout.LayoutParams nrl = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         nrl.gravity = android.view.Gravity.CENTER_HORIZONTAL;
-        nrl.setMargins(0, dp(8), 0, 0);
+        nrl.setMargins(0, dp(3), 0, 0);
         newRow.setLayoutParams(nrl);
         newRow.setOnClickListener(v -> {
-            sessionToken = null;              // force fresh create
-            openSessionScreen();
+            openSessionScreen(true);          // force fresh create
         });
         mainScreen.addView(newRow);
         newSessionRowRef = newRow;
@@ -276,24 +314,30 @@ public class MainActivity extends android.app.Activity {
     }
 
     private void refreshMainHint() {
-        String up = invertScroll ? "↑" : "↓";
-        String pair = invertPair ? "prev" : "next";
-        liveHint.setText("1x↓ rola " + (invertScroll ? "↑" : "↓") + "   •   2x↓ " + pair +
-            "\nsegura p/ config");
+        SharedPreferences p = getSharedPreferences("tome", MODE_PRIVATE);
+        String d = p.getString(Settings.K_MAP_DOWN, "scroll-down");
+        String d2 = p.getString(Settings.K_MAP_2DOWN, "next");
+        String arrowD = d.equals("scroll-down") ? "↓" : d.equals("scroll-up") ? "↑"
+                      : d.equals("next") ? "▶" : d.equals("prev") ? "◀" : "—";
+        String pp = d2.startsWith("scroll") ? "rola " + (d2.equals("scroll-down") ? "↓" : "↑") : d2;
+        liveHint.setText("1x↓ " + arrowD + "  •  2x↓ " + pp + "\nsegura p/ config");
     }
 
     // ============ SESSION FLOW ============
-    private void openSessionScreen() {
-        if (sessionToken == null) {
+    private void openSessionScreen() { openSessionScreen(false); }
+
+    private void openSessionScreen(boolean forceNew) {
+        inSession = true;
+        detector.stop();
+        if (!forceNew && sessionToken == null) {
             String last = getSharedPreferences("tome", MODE_PRIVATE).getString("last_token", null);
             if (last != null) { sessionToken = last; }
         }
-        if (sessionToken != null) {
+        if (!forceNew && sessionToken != null) {
             showSessionReady(sessionToken);
             return;
         }
-        inSession = true;
-        detector.stop();
+        sessionToken = null;   // clean slate for fresh pairing
         createSession();
     }
 
@@ -427,145 +471,9 @@ public class MainActivity extends android.app.Activity {
         setContentView(box);
     }
 
-    private void openSettings() {
-        ScrollView scroll = new ScrollView(this);
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setBackgroundColor(Color.parseColor("#131313"));
-        int pad = (int) (getResources().getDisplayMetrics().density * 12);
-        box.setPadding(pad * 2, pad * 3, pad * 2, pad * 2);
+    // legacy settings UI removed → see Settings.java
 
-        TextView title = new TextView(this);
-        title.setText("⚙︎  Tomes");
-        title.setTextColor(Color.parseColor("#c9b86e"));
-        title.setTextSize(19);
-        title.setPadding(0, 0, 0, pad);
-        box.addView(title);
 
-        box.addView(choiceCard("ROLAGEM — o que o flick ↓ faz",
-                new String[]{"↓ desce a página", "↓ sobe a página"},
-                invertScroll ? 1 : 0, i -> { invertScroll = (i == 1); save(true); })); 
-        box.addView(choiceCard("PÁGINA INTEIRA — dois flicks rápidos ↓",
-                new String[]{"2x↓ = próxima", "2x↓ = anterior"},
-                invertPair ? 1 : 0, i -> { invertPair = (i == 1); save(true); }));
-        box.addView(editCard("Server", serverUrl, v -> promptEdit("Server URL", serverUrl, s -> { serverUrl = s; save(true); })));
-
-        TextView done = new TextView(this);
-        done.setText("✓  Voltar");
-        done.setTextColor(Color.parseColor("#7ee08a"));
-        done.setTextSize(17);
-        done.setGravity(android.view.Gravity.CENTER);
-        done.setBackgroundResource(R.drawable.pill_on);
-        done.setPadding(dp(20), dp(12), dp(20), dp(12));
-        LinearLayout.LayoutParams doneLp = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        doneLp.gravity = android.view.Gravity.CENTER_HORIZONTAL;
-        doneLp.setMargins(0, pad * 2, 0, dp(6));
-        done.setLayoutParams(doneLp);
-        done.setOnClickListener(v -> onBackPressed());
-        done.setId(View.generateViewId());
-        box.addView(done);
-
-        scroll.addView(box);
-        setContentView(scroll);
-        inSettings = true;
-        detector.stop();
-    }
-
-    public interface Intcb { void take(int i); }
-    private LinearLayout choiceCard(String title, String[] options, int selected, Intcb cb) {
-        LinearLayout card = cardShell();
-        TextView t = new TextView(this);
-        t.setText(title);
-        t.setTextColor(Color.parseColor("#c9b86e"));
-        t.setTextSize(13);
-        card.addView(t);
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        for (int i = 0; i < options.length; i++) {
-            final int idx = i;
-            TextView b = new TextView(this);
-            b.setText(options[i]);
-            b.setTextSize(13.5f);
-            b.setTextColor(Color.WHITE);
-            b.setPadding(dp(10), dp(10), dp(10), dp(10));
-            b.setBackgroundResource(i == selected ? R.drawable.pill_on : R.drawable.pill_off);
-            b.setOnClickListener(v -> cb.take(idx));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-            lp.setMargins(dp(4), dp(8), dp(4), 0);
-            row.addView(b, lp);
-        }
-        card.addView(row);
-        return card;
-    }
-
-    private LinearLayout cardShell() {
-        LinearLayout c = new LinearLayout(this);
-        c.setOrientation(LinearLayout.VERTICAL);
-        c.setPadding(pad(), pad(), pad(), pad());
-        c.setBackgroundResource(R.drawable.card_off);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(0, dp(8), 0, dp(8));
-        c.setLayoutParams(lp);
-        return c;
-    }
-
-    private LinearLayout toggleCard(String title, String sub, boolean on, View.OnClickListener onClick) {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(pad(), pad(), pad(), pad());
-        card.setBackgroundResource(on ? R.drawable.card_on : R.drawable.card_off);
-        card.setOnClickListener(onClick);
-
-        TextView main = new TextView(this);
-        main.setText((on ? "☑ " : "☐ ") + title);
-        main.setTextColor(Color.WHITE);
-        main.setTextSize(16);
-        card.addView(main);
-
-        TextView subT = new TextView(this);
-        subT.setText(sub);
-        subT.setTextColor(Color.parseColor("#888888"));
-        subT.setTextSize(13);
-        subT.setPadding(0, dp(4), 0, 0);
-        card.addView(subT);
-        return card;
-    }
-
-    private LinearLayout editCard(String label, String value, View.OnClickListener edit) {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(pad(), pad(), pad(), pad());
-        card.setBackgroundResource(R.drawable.card_off);
-        card.setOnClickListener(edit);
-        TextView l = new TextView(this);
-        l.setText(label);
-        l.setTextColor(Color.parseColor("#6fa8dc"));
-        l.setTextSize(13);
-        card.addView(l);
-        TextView v = new TextView(this);
-        v.setText(value);
-        v.setTextColor(Color.WHITE);
-        v.setTextSize(14);
-        v.setSingleLine(true);
-        v.setEllipsize(TextUtils.TruncateAt.MIDDLE);
-        v.setPadding(0, dp(4), 0, 0);
-        card.addView(v);
-        return card;
-    }
-
-    private void save(boolean restartUi) {
-        getSharedPreferences("tome", MODE_PRIVATE).edit()
-            .putBoolean("invert_scroll", invertScroll)
-            .putBoolean("invert_pair", invertPair)
-            .putString("server", serverUrl)
-            .putString("last_token", sessionToken)
-            .apply();
-        if (restartUi && inSettings) openSettings(); // re-render settings in place (keeps you there)
-        // if NOT in settings (main screen), preferences apply on next recreate() or re-open
-    }
 
     private interface Textcb { void run(String s); }
     private void promptEdit(String title, String value, Textcb cb) {
