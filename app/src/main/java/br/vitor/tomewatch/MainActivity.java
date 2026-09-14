@@ -342,7 +342,7 @@ public class MainActivity extends android.app.Activity {
         box.setGravity(android.view.Gravity.CENTER);
         box.setBackgroundColor(Color.parseColor("#101010"));
 
-        String url = serverUrl + "/watch/pair?token=" + sessionToken;
+        String url = serverUrl + "/watch/pair/" + sessionToken;
         int genPx = 300;
         android.widget.ImageView iv = new android.widget.ImageView(this);
         android.graphics.Bitmap bmp = Qr.encode(url, genPx);
