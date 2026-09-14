@@ -41,6 +41,8 @@ public class MainActivity extends android.app.Activity {
     private FlickDetector detector;
     private String lastAction = "-";
     private int sent = 0;
+    private boolean lastFlickWasDown = false, lastFlickWasUp = false;
+    private long lastFlickAt = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,7 +50,7 @@ public class MainActivity extends android.app.Activity {
         status = new TextView(this);
         status.setTextSize(22);
         status.setPadding(30, 70, 30, 30);
-        status.setText("Tome Watch\npronto");
+        status.setText("Tome Watch\n1x↓=scroll ↓  2x↓=next\n1x↑=scroll ↑  2x↑=prev");
         setContentView(status);
 
         http = new OkHttpClient.Builder()
@@ -60,15 +62,21 @@ public class MainActivity extends android.app.Activity {
 
         detector = new FlickDetector((SensorManager) getSystemService(Context.SENSOR_SERVICE),
                 flick -> {
+                    long now = android.os.SystemClock.elapsedRealtime();
+                    boolean isDown = (flick == FlickDetector.Flick.DOWN);
+                    boolean isUp   = (flick == FlickDetector.Flick.UP);
                     String action;
-                    switch (flick) {
-                        case OUT:  action = "next"; break;
-                        case IN:   action = "prev"; break;
-                        case DOWN: action = "scroll-down"; break;
-                        case UP:   action = "scroll-up"; break;
-                        default:   action = null; break;
-                    }
-                    if (action != null) {
+                    if (isDown || isUp) {
+                        boolean sameAsLast = (isDown && lastFlickWasDown) || (isUp && lastFlickWasUp);
+                        boolean withinWindow = (now - lastFlickAt) < 1000;
+                        if (sameAsLast && withinWindow) {
+                            action = isDown ? "next" : "prev";
+                            lastFlickAt = 0; // consume pair
+                        } else {
+                            action = isDown ? "scroll-down" : "scroll-up";
+                            lastFlickWasDown = isDown; lastFlickWasUp = isUp;
+                            lastFlickAt = now;
+                        }
                         Log.d(TAG, "FLICK " + flick + " -> " + action);
                         updateUi(action);
                         sendAction(action);
