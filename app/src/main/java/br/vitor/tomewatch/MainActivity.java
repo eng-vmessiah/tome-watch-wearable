@@ -156,7 +156,7 @@ public class MainActivity extends android.app.Activity {
         title.setPadding(0, 0, 0, pad);
         box.addView(title);
 
-        box.addView(toggleCard("Sanha ↓  (scroll-down)",
+        box.addView(toggleCard("Flick ↓  (scroll-down)",
                 invertScroll ? "in — inverte: 1x↓ sobe" : "padrao: 1x↓ desce",
                 invertScroll, v -> { invertScroll = !invertScroll; save(true); }));
         box.addView(toggleCard("Doublê ↑  (next/prev)",
@@ -231,7 +231,8 @@ public class MainActivity extends android.app.Activity {
             .putString("server", serverUrl)
             .putString("token", tokenVal)
             .apply();
-        if (restartUi) recreate(); // rebuild cards with new state
+        if (restartUi && inSettings) openSettings(); // re-render settings in place (keeps you there)
+        // if NOT in settings (main screen), preferences apply on next recreate() or re-open
     }
 
     private interface Textcb { void run(String s); }
