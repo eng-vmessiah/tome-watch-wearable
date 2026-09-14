@@ -193,7 +193,7 @@ public class MainActivity extends android.app.Activity {
         liveAction.setTextColor(Color.WHITE);
         liveAction.setTextSize(24);
         liveAction.setGravity(android.view.Gravity.CENTER);
-        liveAction.setPadding(0, dp(18), 0, dp(4));
+        liveAction.setPadding(0, dp(14), 0, dp(3));
         mainScreen.addView(liveAction);
 
         liveCount = new TextView(this);
@@ -207,16 +207,16 @@ public class MainActivity extends android.app.Activity {
         liveHint.setGravity(android.view.Gravity.CENTER);
         liveHint.setTextColor(Color.parseColor("#555555"));
         liveHint.setTextSize(12);
-        liveHint.setPadding(0, dp(14), 0, 0);
+        liveHint.setPadding(0, dp(8), 0, 0);
         mainScreen.addView(liveHint);
 
         TextView sessionRow = new TextView(this);
         sessionRow.setId(View.generateViewId());
         sessionRow.setGravity(android.view.Gravity.CENTER);
         sessionRow.setTextColor(Color.WHITE);
-        sessionRow.setTextSize(15);
+        sessionRow.setTextSize(13.5f);
         sessionRow.setBackgroundResource(R.drawable.pill_on);
-        sessionRow.setPadding(dp(24), dp(12), dp(24), dp(12));
+        sessionRow.setPadding(dp(18), dp(9), dp(18), dp(9));
         LinearLayout.LayoutParams srl = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         srl.gravity = android.view.Gravity.CENTER_HORIZONTAL;
