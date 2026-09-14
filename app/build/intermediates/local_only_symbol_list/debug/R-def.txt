@@ -4,4 +4,5 @@ drawable card_off
 drawable card_on
 drawable pill_off
 drawable pill_on
+mipmap ic_launcher
 string app_name

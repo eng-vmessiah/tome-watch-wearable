@@ -9,6 +9,7 @@
     <application
         android:label="Tome Watch"
         android:theme="@android:style/Theme.DeviceDefault"
+        android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:usesCleartextTraffic="true">
 

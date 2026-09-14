@@ -20,6 +20,7 @@
         android:allowBackup="false"
         android:debuggable="true"
         android:extractNativeLibs="false"
+        android:icon="@mipmap/ic_launcher"
         android:label="Tome Watch"
         android:theme="@android:style/Theme.DeviceDefault"
         android:usesCleartextTraffic="true" >

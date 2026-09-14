@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:2:1-27:12
-INJECTED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:2:1-27:12
-INJECTED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:2:1-27:12
-INJECTED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:2:1-27:12
+ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:2:1-28:12
+INJECTED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:2:1-28:12
+INJECTED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:2:1-28:12
+INJECTED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:2:1-28:12
 	package
 		INJECTED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml
 	android:versionName
@@ -31,42 +31,44 @@ ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.
 	android:name
 		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:7:19-61
 application
-ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:9:5-26:19
-INJECTED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:9:5-26:19
+ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:9:5-27:19
+INJECTED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:9:5-27:19
 	android:extractNativeLibs
 		INJECTED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml
 	android:label
 		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:10:9-35
+	android:icon
+		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:12:9-43
 	android:allowBackup
-		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:12:9-36
+		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:13:9-36
 	android:theme
 		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:11:9-59
 	android:usesCleartextTraffic
-		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:13:9-44
+		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:14:9-44
 uses-library#com.google.android.wearable
-ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:15:9-93
+ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:16:9-93
 	android:required
-		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:15:66-90
+		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:16:66-90
 	android:name
-		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:15:23-65
+		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:16:23-65
 activity#br.vitor.tomewatch.MainActivity
-ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:17:9-25:20
+ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:18:9-26:20
 	android:launchMode
-		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:20:13-43
+		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:21:13-43
 	android:exported
-		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:19:13-36
+		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:20:13-36
 	android:name
-		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:18:13-41
+		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:19:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:21:13-24:29
+ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:22:13-25:29
 action#android.intent.action.MAIN
-ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:22:17-69
+ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:23:17-69
 	android:name
-		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:22:25-66
+		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:23:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:23:17-77
+ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:24:17-77
 	android:name
-		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:23:27-74
+		ADDED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:24:27-74
 uses-sdk
 INJECTED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml
