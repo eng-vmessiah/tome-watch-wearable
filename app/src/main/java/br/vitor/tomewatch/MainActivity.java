@@ -220,11 +220,32 @@ public class MainActivity extends android.app.Activity {
         LinearLayout.LayoutParams srl = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         srl.gravity = android.view.Gravity.CENTER_HORIZONTAL;
-        srl.setMargins(0, dp(14), 0, 0);
+        srl.setMargins(0, dp(12), 0, 0);
         sessionRow.setLayoutParams(srl);
         sessionRow.setOnClickListener(v -> openSessionScreen());
         mainScreen.addView(sessionRow);
         sessionRowRef = sessionRow;
+
+        TextView newRow = new TextView(this);
+        newRow.setId(View.generateViewId());
+        newRow.setGravity(android.view.Gravity.CENTER);
+        newRow.setTextColor(Color.parseColor("#c9b86e"));
+        newRow.setTextSize(13.5f);
+        newRow.setBackgroundResource(R.drawable.card_off);
+        newRow.setPadding(dp(18), dp(9), dp(18), dp(9));
+        LinearLayout.LayoutParams nrl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        nrl.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+        nrl.setMargins(0, dp(8), 0, 0);
+        newRow.setLayoutParams(nrl);
+        newRow.setOnClickListener(v -> {
+            sessionToken = null;              // force fresh create
+            openSessionScreen();
+        });
+        mainScreen.addView(newRow);
+        newSessionRowRef = newRow;
+
+        refreshSessionRow();
         refreshSessionRow();
 
         status = liveAction;
@@ -233,17 +254,24 @@ public class MainActivity extends android.app.Activity {
     }
 
     private TextView sessionRowRef;
+    private TextView newSessionRowRef;
 
     private void refreshSessionRow() {
-        if (sessionRowRef == null) return;
+        if (newSessionRowRef == null) return;
         String last = getSharedPreferences("tome", MODE_PRIVATE)
                 .getString("last_token", null);
         if (sessionToken != null) {
-            sessionRowRef.setText("⏱ sessão ativa · n");
+            if (sessionRowRef != null) sessionRowRef.setText("⏱ sessão ativa");
+            newSessionRowRef.setText("+ nova sessão");
+            newSessionRowRef.setVisibility(View.VISIBLE);
         } else if (last != null) {
+            if (sessionRowRef != null) sessionRowRef.setVisibility(View.VISIBLE);
             sessionRowRef.setText("↺ retomar sessão");
+            newSessionRowRef.setText("+ nova sessão");
+            newSessionRowRef.setVisibility(View.VISIBLE);
         } else {
-            sessionRowRef.setText("+ nova sessão");
+            if (sessionRowRef != null) sessionRowRef.setVisibility(View.GONE);
+            newSessionRowRef.setText("+ nova sessão");
         }
     }
 
