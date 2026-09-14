@@ -89,10 +89,12 @@ public class MainActivity extends android.app.Activity {
                         boolean sameAsLast = (isDown && lastFlickWasDown) || (isUp && lastFlickWasUp);
                         boolean withinWindow = (now - lastFlickAt) < 1000;
                         if (sameAsLast && withinWindow) {
-                            action = isDown ? "next" : "prev";
+                            boolean pairDown = (isDown != invertPair);
+                            action = pairDown ? "next" : "prev";
                             lastFlickAt = 0; // consume pair
                         } else {
-                            action = isDown ? "scroll-down" : "scroll-up";
+                            boolean down = (isDown != invertScroll);
+                            action = down ? "scroll-down" : "scroll-up";
                             lastFlickWasDown = isDown; lastFlickWasUp = isUp;
                             lastFlickAt = now;
                         }
