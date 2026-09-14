@@ -58,17 +58,14 @@ public class MainActivity extends android.app.Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        status = new TextView(this);
-        status.setTextSize(22);
-        status.setPadding(30, 70, 30, 30);
-        status.setText("Tome Watch\n\nflick = rola página\ndouble flick = vira\n\nsegure p/ config");
-        setContentView(status);
+        buildMainScreen();
 
         SharedPreferences prefs = getSharedPreferences("tome", MODE_PRIVATE);
         invertScroll = prefs.getBoolean("invert_scroll", false);
         invertPair = prefs.getBoolean("invert_pair", false);
         serverUrl = prefs.getString("server", SERVER);
         tokenVal = prefs.getString("token", TOKEN);
+        if (liveHint != null) refreshMainHint();
 
         status.setOnLongClickListener(v -> { openSettings(); return true; });
 
@@ -119,8 +116,14 @@ public class MainActivity extends android.app.Activity {
     private void updateUi(String action) {
         lastAction = action;
         sent++;
-        runOnUiThread(() -> status.setText(
-            "→ " + lastAction + "\n#" + sent + "\n" + SERVER));
+        String icon = action.equals("next") ? "▶" :
+                      action.equals("prev") ? "◀" :
+                      action.equals("scroll-down") ? "⬇" : "⬆";
+        runOnUiThread(() -> {
+            liveAction.setText(icon + " " + action);
+            liveCount.setTextColor(Color.parseColor("#7ee08a"));
+            liveCount.setText("✓ enviado · ação #" + sent);
+        });
     }
 
     private void sendAction(String action) {
@@ -133,7 +136,11 @@ public class MainActivity extends android.app.Activity {
         http.newCall(req).enqueue(new okhttp3.Callback() {
             @Override public void onFailure(Call call, IOException e) {
                 Log.d(TAG, "POST FAILED", e);
-                runOnUiThread(() -> status.setText("✗ " + e.getClass().getSimpleName() + "\n→ " + lastAction));
+                runOnUiThread(() -> {
+                    liveAction.setText("✗ " + e.getClass().getSimpleName());
+                    liveCount.setTextColor(Color.parseColor("#e07e7e"));
+                    liveCount.setText("falha de rede · último: " + lastAction);
+                });
             }
             @Override public void onResponse(Call call, Response res) throws IOException {
                 int code = res.code();
@@ -141,6 +148,60 @@ public class MainActivity extends android.app.Activity {
                 Log.d(TAG, "POST RESP " + code);
             }
         });
+    }
+
+    private LinearLayout mainScreen;
+    private TextView liveAction;   // big icon+action
+    private TextView liveCount;    // actions sent
+    private TextView liveHint;     // mapping hint
+
+    private void buildMainScreen() {
+        mainScreen = new LinearLayout(this);
+        mainScreen.setOrientation(LinearLayout.VERTICAL);
+        mainScreen.setGravity(android.view.Gravity.CENTER);
+        mainScreen.setBackgroundColor(Color.parseColor("#101010"));
+        int pad = dp(10);
+        mainScreen.setPadding(dp(16), pad, dp(16), pad);
+
+        TextView title = new TextView(this);
+        title.setText("📖  Tome Watch");
+        title.setTextColor(Color.parseColor("#c9b86e"));
+        title.setTextSize(18);
+        title.setGravity(android.view.Gravity.CENTER);
+        mainScreen.addView(title);
+
+        liveAction = new TextView(this);
+        liveAction.setText("— pronto");
+        liveAction.setTextColor(Color.WHITE);
+        liveAction.setTextSize(24);
+        liveAction.setGravity(android.view.Gravity.CENTER);
+        liveAction.setPadding(0, dp(18), 0, dp(4));
+        mainScreen.addView(liveAction);
+
+        liveCount = new TextView(this);
+        liveCount.setText("ação #0");
+        liveCount.setTextColor(Color.parseColor("#666666"));
+        liveCount.setTextSize(13);
+        liveCount.setGravity(android.view.Gravity.CENTER);
+        mainScreen.addView(liveCount);
+
+        liveHint = new TextView(this);
+        liveHint.setGravity(android.view.Gravity.CENTER);
+        liveHint.setTextColor(Color.parseColor("#555555"));
+        liveHint.setTextSize(12);
+        liveHint.setPadding(0, dp(14), 0, 0);
+        mainScreen.addView(liveHint);
+
+        status = liveAction;   // failures write here too
+        setContentView(mainScreen);
+        refreshMainHint();
+    }
+
+    private void refreshMainHint() {
+        String up = invertScroll ? "↑" : "↓";
+        String pair = invertPair ? "prev" : "next";
+        liveHint.setText("1x↓ rola " + (invertScroll ? "↑" : "↓") + "   •   2x↓ " + pair +
+            "\nsegura p/ config");
     }
 
     private void openSettings() {
