@@ -13,6 +13,11 @@ import android.widget.TextView;
 import android.content.SharedPreferences;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.EditText;
+import android.app.AlertDialog;
+import android.text.TextUtils;
+import android.view.View;
 import android.graphics.Color;
 
 import java.io.IOException;
@@ -137,38 +142,113 @@ public class MainActivity extends android.app.Activity {
     }
 
     private void openSettings() {
+        ScrollView scroll = new ScrollView(this);
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(30, 60, 30, 30);
-        box.addView(row("Inverter scroll: " + (invertScroll ? "SIM" : "não"), v -> {
-            invertScroll = !invertScroll; save(); recreate();
-        }));
-        box.addView(row("Inverter next/prev: " + (invertPair ? "SIM" : "não"), v -> {
-            invertPair = !invertPair; save(); recreate();
-        }));
-        box.addView(row("Server: " + serverUrl, v -> {}));
-        box.addView(row("Token: " + tokenVal, v -> {}));
-        setContentView(box);
+        box.setBackgroundColor(Color.parseColor("#131313"));
+        int pad = (int) (getResources().getDisplayMetrics().density * 12);
+        box.setPadding(pad * 2, pad * 3, pad * 2, pad * 2);
+
+        TextView title = new TextView(this);
+        title.setText("⚙︎  Tomes");
+        title.setTextColor(Color.parseColor("#c9b86e"));
+        title.setTextSize(19);
+        title.setPadding(0, 0, 0, pad);
+        box.addView(title);
+
+        box.addView(toggleCard("Sanha ↓  (scroll-down)",
+                invertScroll ? "in — inverte: 1x↓ sobe" : "padrao: 1x↓ desce",
+                invertScroll, v -> { invertScroll = !invertScroll; save(true); }));
+        box.addView(toggleCard("Doublê ↑  (next/prev)",
+                invertPair ? "inverto: 2x↓=prev" : "padrao: 2x↓=next",
+                invertPair, v -> { invertPair = !invertPair; save(true); }));
+        box.addView(editCard("Server", serverUrl, v -> promptEdit("Server URL", serverUrl, s -> { serverUrl = s; save(true); })));
+        box.addView(editCard("Token", tokenVal, v -> promptEdit("Token", tokenVal, s -> { tokenVal = s; save(true); })));
+
+        TextView done = new TextView(this);
+        done.setText("✓  Voltar");
+        done.setTextColor(Color.parseColor("#7ee08a"));
+        done.setTextSize(18);
+        done.setPadding(0, pad * 2, 0, pad);
+        done.setOnClickListener(v -> onBackPressed());
+        done.setId(View.generateViewId());
+        box.addView(done);
+
+        scroll.addView(box);
+        setContentView(scroll);
+        inSettings = true;
+        detector.stop();
     }
 
-    private TextView row(String label, android.view.View.OnClickListener onClick) {
-        TextView t = new TextView(this);
-        t.setText(label);
-        t.setTextColor(Color.WHITE);
-        t.setPadding(16, 34, 16, 34);
-        t.setTextSize(17);
-        t.setOnClickListener(onClick);
-        return t;
+    private LinearLayout toggleCard(String title, String sub, boolean on, View.OnClickListener onClick) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(pad(), pad(), pad(), pad());
+        card.setBackgroundResource(on ? R.drawable.card_on : R.drawable.card_off);
+        card.setOnClickListener(onClick);
+
+        TextView main = new TextView(this);
+        main.setText((on ? "☑ " : "☐ ") + title);
+        main.setTextColor(Color.WHITE);
+        main.setTextSize(16);
+        card.addView(main);
+
+        TextView subT = new TextView(this);
+        subT.setText(sub);
+        subT.setTextColor(Color.parseColor("#888888"));
+        subT.setTextSize(13);
+        subT.setPadding(0, dp(4), 0, 0);
+        card.addView(subT);
+        return card;
     }
 
-    private void save() {
+    private LinearLayout editCard(String label, String value, View.OnClickListener edit) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(pad(), pad(), pad(), pad());
+        card.setBackgroundResource(R.drawable.card_off);
+        card.setOnClickListener(edit);
+        TextView l = new TextView(this);
+        l.setText(label);
+        l.setTextColor(Color.parseColor("#6fa8dc"));
+        l.setTextSize(13);
+        card.addView(l);
+        TextView v = new TextView(this);
+        v.setText(value);
+        v.setTextColor(Color.WHITE);
+        v.setTextSize(14);
+        v.setSingleLine(true);
+        v.setEllipsize(TextUtils.TruncateAt.MIDDLE);
+        v.setPadding(0, dp(4), 0, 0);
+        card.addView(v);
+        return card;
+    }
+
+    private void save(boolean restartUi) {
         getSharedPreferences("tome", MODE_PRIVATE).edit()
             .putBoolean("invert_scroll", invertScroll)
             .putBoolean("invert_pair", invertPair)
             .putString("server", serverUrl)
             .putString("token", tokenVal)
             .apply();
+        if (restartUi) recreate(); // rebuild cards with new state
     }
+
+    private interface Textcb { void run(String s); }
+    private void promptEdit(String title, String value, Textcb cb) {
+        AlertDialog.Builder b = new AlertDialog.Builder(this);
+        b.setTitle(title);
+        final EditText input = new EditText(this);
+        input.setText(value);
+        input.setTextColor(Color.WHITE);
+        b.setView(input);
+        b.setPositiveButton("OK", (d, w) -> cb.run(input.getText().toString().trim()));
+        b.setNegativeButton("Cancel", (d, w) -> d.dismiss());
+        b.show();
+    }
+
+    private int pad()   { return (int) (getResources().getDisplayMetrics().density * 12); }
+    private int dp(int d) { return (int) (getResources().getDisplayMetrics().density * d); }
 
     private void buzz(int ms) {
         try {
