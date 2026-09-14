@@ -213,9 +213,15 @@ public class MainActivity extends android.app.Activity {
         TextView sessionRow = new TextView(this);
         sessionRow.setId(View.generateViewId());
         sessionRow.setGravity(android.view.Gravity.CENTER);
-        sessionRow.setTextColor(Color.parseColor("#6fa8dc"));
+        sessionRow.setTextColor(Color.WHITE);
         sessionRow.setTextSize(15);
-        sessionRow.setPadding(0, dp(10), 0, 0);
+        sessionRow.setBackgroundResource(R.drawable.pill_on);
+        sessionRow.setPadding(dp(24), dp(12), dp(24), dp(12));
+        LinearLayout.LayoutParams srl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        srl.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+        srl.setMargins(0, dp(14), 0, 0);
+        sessionRow.setLayoutParams(srl);
         sessionRow.setOnClickListener(v -> openSessionScreen());
         mainScreen.addView(sessionRow);
         sessionRowRef = sessionRow;
@@ -232,10 +238,13 @@ public class MainActivity extends android.app.Activity {
         if (sessionRowRef == null) return;
         String last = getSharedPreferences("tome", MODE_PRIVATE)
                 .getString("last_token", null);
-        sessionRowRef.setText(sessionToken != null
-                ? "sessão: " + sessionToken.substring(0, 4) + "… (tocar p/ nova)"
-                : (last != null ? "retomar sessão " + last.substring(0, 4) + "…"
-                                : "+ nova sessão"));
+        if (sessionToken != null) {
+            sessionRowRef.setText("⏱ sessão ativa · n");
+        } else if (last != null) {
+            sessionRowRef.setText("↺ retomar sessão");
+        } else {
+            sessionRowRef.setText("+ nova sessão");
+        }
     }
 
     private void refreshMainHint() {
