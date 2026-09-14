@@ -61,7 +61,7 @@ public class MainActivity extends android.app.Activity {
         status = new TextView(this);
         status.setTextSize(22);
         status.setPadding(30, 70, 30, 30);
-        status.setText("Tome Watch\n1x↓=↓  2x↓=next\n1x↑=↑  2x↑=prev");
+        status.setText("Tome Watch\n\nflick = rola página\ndouble flick = vira\n\nsegure p/ config");
         setContentView(status);
 
         SharedPreferences prefs = getSharedPreferences("tome", MODE_PRIVATE);
@@ -158,12 +158,12 @@ public class MainActivity extends android.app.Activity {
         title.setPadding(0, 0, 0, pad);
         box.addView(title);
 
-        box.addView(toggleCard("Flick ↓  (scroll-down)",
-                invertScroll ? "in — inverte: 1x↓ sobe" : "padrao: 1x↓ desce",
-                invertScroll, v -> { invertScroll = !invertScroll; save(true); }));
-        box.addView(toggleCard("Doublê ↑  (next/prev)",
-                invertPair ? "inverto: 2x↓=prev" : "padrao: 2x↓=next",
-                invertPair, v -> { invertPair = !invertPair; save(true); }));
+        box.addView(choiceCard("ROLAGEM — o que o flick ↓ faz",
+                new String[]{"↓ desce a página", "↓ sobe a página"},
+                invertScroll ? 1 : 0, i -> { invertScroll = (i == 1); save(true); })); 
+        box.addView(choiceCard("PÁGINA INTEIRA — dois flicks rápidos ↓",
+                new String[]{"2x↓ = próxima", "2x↓ = anterior"},
+                invertPair ? 1 : 0, i -> { invertPair = (i == 1); save(true); }));
         box.addView(editCard("Server", serverUrl, v -> promptEdit("Server URL", serverUrl, s -> { serverUrl = s; save(true); })));
         box.addView(editCard("Token", tokenVal, v -> promptEdit("Token", tokenVal, s -> { tokenVal = s; save(true); })));
 
@@ -180,6 +180,46 @@ public class MainActivity extends android.app.Activity {
         setContentView(scroll);
         inSettings = true;
         detector.stop();
+    }
+
+    public interface Intcb { void take(int i); }
+    private LinearLayout choiceCard(String title, String[] options, int selected, Intcb cb) {
+        LinearLayout card = cardShell();
+        TextView t = new TextView(this);
+        t.setText(title);
+        t.setTextColor(Color.parseColor("#c9b86e"));
+        t.setTextSize(13);
+        card.addView(t);
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        for (int i = 0; i < options.length; i++) {
+            final int idx = i;
+            TextView b = new TextView(this);
+            b.setText(options[i]);
+            b.setTextSize(13.5f);
+            b.setTextColor(Color.WHITE);
+            b.setPadding(dp(10), dp(10), dp(10), dp(10));
+            b.setBackgroundResource(i == selected ? R.drawable.pill_on : R.drawable.pill_off);
+            b.setOnClickListener(v -> cb.take(idx));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            lp.setMargins(dp(4), dp(8), dp(4), 0);
+            row.addView(b, lp);
+        }
+        card.addView(row);
+        return card;
+    }
+
+    private LinearLayout cardShell() {
+        LinearLayout c = new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setPadding(pad(), pad(), pad(), pad());
+        c.setBackgroundResource(R.drawable.card_off);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(0, dp(8), 0, dp(8));
+        c.setLayoutParams(lp);
+        return c;
     }
 
     private LinearLayout toggleCard(String title, String sub, boolean on, View.OnClickListener onClick) {
