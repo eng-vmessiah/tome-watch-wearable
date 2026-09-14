@@ -329,12 +329,7 @@ public class MainActivity extends android.app.Activity {
     private void createSession2() { createSession(); }
 
     private void showSessionReady(String token) {
-        if (sessionToken == null) sessionToken = sessionToken_placeholder();
-    }
-
-    private String sessionToken_placeholder(){ return null; }
-
-    private void _unused_showSessionReady() {
+        if (token == null) token = sessionToken;
         inSession = true;
         detector.stop();
         showQr();
@@ -348,31 +343,38 @@ public class MainActivity extends android.app.Activity {
         box.setBackgroundColor(Color.parseColor("#101010"));
 
         String url = serverUrl + "/watch/pair?token=" + sessionToken;
-        int size = Math.min(340, getResources().getDisplayMetrics().widthPixels);
+        int genPx = 300;
         android.widget.ImageView iv = new android.widget.ImageView(this);
-        android.graphics.Bitmap bmp = Qr.encode(url, size);
+        android.graphics.Bitmap bmp = Qr.encode(url, genPx);
         if (bmp != null) {
             iv.setImageBitmap(bmp);
+            int viewSize = (int) (getResources().getDisplayMetrics().widthPixels * 0.56);
             android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    viewSize, viewSize);
             lp.gravity = android.view.Gravity.CENTER;
-            lp.setMargins(0, dp(8), 0, 0);
+            lp.setMargins(0, dp(4), 0, dp(4));
             iv.setLayoutParams(lp);
             box.addView(iv);
         }
 
         TextView tk = new TextView(this);
-        tk.setText(sessionToken);
+        tk.setPadding(0, dp(6), 0, 0);
+        String raw = sessionToken;
+        StringBuilder chunks = new StringBuilder();
+        for (int i = 0; i < raw.length(); i += 4) {
+            chunks.append(raw, i, Math.min(raw.length(), i + 4));
+            if (i + 4 < raw.length()) chunks.append(' ');
+        }
+        tk.setText(chunks.toString());
         tk.setTextColor(Color.WHITE);
-        tk.setTextSize(16);
+        tk.setTextSize(13);
         tk.setGravity(android.view.Gravity.CENTER);
-        tk.setLetterSpacing(0.15f);
         box.addView(tk);
 
         TextView note = new TextView(this);
-        note.setText("escaneie no celular\n(ou escreva o código)");
+        note.setText("escaneie / insira na web");
         note.setTextColor(Color.parseColor("#8a8a8a"));
-        note.setTextSize(12);
+        note.setTextSize(11);
         note.setGravity(android.view.Gravity.CENTER);
         box.addView(note);
 
