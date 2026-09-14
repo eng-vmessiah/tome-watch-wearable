@@ -10,6 +10,10 @@ import android.os.Vibrator;
 import android.util.Log;
 import android.view.WindowManager;
 import android.widget.TextView;
+import android.content.SharedPreferences;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.graphics.Color;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +42,8 @@ public class MainActivity extends android.app.Activity {
 
     private OkHttpClient http;
     private TextView status;
+    private boolean invertScroll = false, invertPair = false;
+    private String serverUrl, tokenVal;
     private FlickDetector detector;
     private String lastAction = "-";
     private int sent = 0;
@@ -52,6 +58,14 @@ public class MainActivity extends android.app.Activity {
         status.setPadding(30, 70, 30, 30);
         status.setText("Tome Watch\n1x↓=↓  2x↓=next\n1x↑=↑  2x↑=prev");
         setContentView(status);
+
+        SharedPreferences prefs = getSharedPreferences("tome", MODE_PRIVATE);
+        invertScroll = prefs.getBoolean("invert_scroll", false);
+        invertPair = prefs.getBoolean("invert_pair", false);
+        serverUrl = prefs.getString("server", SERVER);
+        tokenVal = prefs.getString("token", TOKEN);
+
+        status.setOnLongClickListener(v -> { openSettings(); return true; });
 
         http = new OkHttpClient.Builder()
                 .connectTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
@@ -84,7 +98,15 @@ public class MainActivity extends android.app.Activity {
                 });
     }
 
-    @Override protected void onResume() { super.onResume(); detector.start(); }
+    private boolean inSettings = false;
+
+    @Override
+    public void onBackPressed() {
+        if (inSettings) { inSettings = false; recreate(); }
+        else { inSettings = true; detector.stop(); openSettings(); }
+    }
+
+    @Override protected void onResume() { if (!inSettings) detector.start(); }
     @Override protected void onPause()  { super.onPause();  detector.stop();  }
 
     private void updateUi(String action) {
@@ -98,7 +120,7 @@ public class MainActivity extends android.app.Activity {
         buzz(20);
         String body = "{\"action\":\"" + action + "\"}";
         Request req = new Request.Builder()
-                .url(SERVER + "/api/watch/" + TOKEN)
+                .url(serverUrl + "/api/watch/" + tokenVal)
                 .post(RequestBody.create(body, JSON))
                 .build();
         http.newCall(req).enqueue(new okhttp3.Callback() {
@@ -112,6 +134,40 @@ public class MainActivity extends android.app.Activity {
                 Log.d(TAG, "POST RESP " + code);
             }
         });
+    }
+
+    private void openSettings() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(30, 60, 30, 30);
+        box.addView(row("Inverter scroll: " + (invertScroll ? "SIM" : "não"), v -> {
+            invertScroll = !invertScroll; save(); recreate();
+        }));
+        box.addView(row("Inverter next/prev: " + (invertPair ? "SIM" : "não"), v -> {
+            invertPair = !invertPair; save(); recreate();
+        }));
+        box.addView(row("Server: " + serverUrl, v -> {}));
+        box.addView(row("Token: " + tokenVal, v -> {}));
+        setContentView(box);
+    }
+
+    private TextView row(String label, android.view.View.OnClickListener onClick) {
+        TextView t = new TextView(this);
+        t.setText(label);
+        t.setTextColor(Color.WHITE);
+        t.setPadding(16, 34, 16, 34);
+        t.setTextSize(17);
+        t.setOnClickListener(onClick);
+        return t;
+    }
+
+    private void save() {
+        getSharedPreferences("tome", MODE_PRIVATE).edit()
+            .putBoolean("invert_scroll", invertScroll)
+            .putBoolean("invert_pair", invertPair)
+            .putString("server", serverUrl)
+            .putString("token", tokenVal)
+            .apply();
     }
 
     private void buzz(int ms) {
