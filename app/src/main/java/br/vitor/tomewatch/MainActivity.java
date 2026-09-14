@@ -231,8 +231,15 @@ public class MainActivity extends android.app.Activity {
         TextView done = new TextView(this);
         done.setText("✓  Voltar");
         done.setTextColor(Color.parseColor("#7ee08a"));
-        done.setTextSize(18);
-        done.setPadding(0, pad * 2, 0, pad);
+        done.setTextSize(17);
+        done.setGravity(android.view.Gravity.CENTER);
+        done.setBackgroundResource(R.drawable.pill_on);
+        done.setPadding(dp(20), dp(12), dp(20), dp(12));
+        LinearLayout.LayoutParams doneLp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        doneLp.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+        doneLp.setMargins(0, pad * 2, 0, dp(6));
+        done.setLayoutParams(doneLp);
         done.setOnClickListener(v -> onBackPressed());
         done.setId(View.generateViewId());
         box.addView(done);
