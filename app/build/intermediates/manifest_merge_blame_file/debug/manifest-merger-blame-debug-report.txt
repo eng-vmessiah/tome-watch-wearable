@@ -11,53 +11,58 @@
 11    <uses-permission android:name="android.permission.INTERNET" />
 11-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:4:5-67
 11-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:4:22-64
-12    <uses-permission android:name="android.permission.WAKE_LOCK" />
-12-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:5:5-68
-12-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:5:22-65
-13
-14    <uses-feature
-14-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:6:5-88
-15        android:name="android.hardware.type.watch"
-15-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:6:19-61
-16        android:required="true" />
-16-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:6:62-85
-17
-18    <application
-18-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:8:5-24:19
-19        android:allowBackup="false"
-19-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:11:9-36
-20        android:debuggable="true"
-21        android:extractNativeLibs="false"
-22        android:label="Tome Watch"
-22-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:9:9-35
-23        android:theme="@android:style/Theme.DeviceDefault" >
-23-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:10:9-59
-24        <uses-library
-24-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:13:9-93
-25            android:name="com.google.android.wearable"
-25-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:13:23-65
-26            android:required="false" />
-26-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:13:66-90
-27
-28        <activity
-28-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:15:9-23:20
-29            android:name="br.vitor.tomewatch.MainActivity"
-29-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:16:13-41
-30            android:exported="true"
-30-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:17:13-36
-31            android:launchMode="singleTop" >
-31-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:18:13-43
-32            <intent-filter>
-32-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:19:13-22:29
-33                <action android:name="android.intent.action.MAIN" />
-33-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:20:17-69
-33-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:20:25-66
-34
-35                <category android:name="android.intent.category.LAUNCHER" />
-35-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:21:17-77
-35-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:21:27-74
-36            </intent-filter>
-37        </activity>
-38    </application>
-39
-40</manifest>
+12    <uses-permission android:name="android.permission.VIBRATE" />
+12-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:5:5-66
+12-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:5:22-63
+13    <uses-permission android:name="android.permission.WAKE_LOCK" />
+13-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:6:5-68
+13-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:6:22-65
+14
+15    <uses-feature
+15-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:7:5-88
+16        android:name="android.hardware.type.watch"
+16-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:7:19-61
+17        android:required="true" />
+17-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:7:62-85
+18
+19    <application
+19-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:9:5-26:19
+20        android:allowBackup="false"
+20-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:12:9-36
+21        android:debuggable="true"
+22        android:extractNativeLibs="false"
+23        android:label="Tome Watch"
+23-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:10:9-35
+24        android:theme="@android:style/Theme.DeviceDefault"
+24-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:11:9-59
+25        android:usesCleartextTraffic="true" >
+25-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:13:9-44
+26        <uses-library
+26-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:15:9-93
+27            android:name="com.google.android.wearable"
+27-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:15:23-65
+28            android:required="false" />
+28-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:15:66-90
+29
+30        <activity
+30-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:17:9-25:20
+31            android:name="br.vitor.tomewatch.MainActivity"
+31-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:18:13-41
+32            android:exported="true"
+32-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:19:13-36
+33            android:launchMode="singleTop" >
+33-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:20:13-43
+34            <intent-filter>
+34-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:21:13-24:29
+35                <action android:name="android.intent.action.MAIN" />
+35-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:22:17-69
+35-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:22:25-66
+36
+37                <category android:name="android.intent.category.LAUNCHER" />
+37-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:23:17-77
+37-->/home/vitor/project/tome-watch-wearable/app/src/main/AndroidManifest.xml:23:27-74
+38            </intent-filter>
+39        </activity>
+40    </application>
+41
+42</manifest>
