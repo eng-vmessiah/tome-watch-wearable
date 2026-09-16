@@ -19,6 +19,7 @@ import android.app.AlertDialog;
 import android.text.TextUtils;
 import android.view.View;
 import android.graphics.Color;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -188,8 +189,32 @@ public class MainActivity extends android.app.Activity {
             }
             @Override public void onResponse(Call call, Response res) throws IOException {
                 int code = res.code();
+                String bodyStr = "";
+                if (res.body() != null) {
+                    try { bodyStr = res.body().string(); } catch (IOException ignored) {}
+                }
                 res.close();
-                Log.d(TAG, "POST RESP " + code);
+                Log.d(TAG, "POST RESP " + code + " " + bodyStr);
+                if (code == 200) {
+                    // readers: how many readers the plugin broadcast to (0 = no phone
+                    // has the reader open). -1/absent = older plugin: keep the optimistic ✓.
+                    int readers = -1;
+                    try {
+                        JSONObject o = new JSONObject(bodyStr);
+                        if (o.has("readers")) readers = o.optInt("readers", -1);
+                    } catch (Exception ignored) {}
+                    if (readers == 0) {
+                        runOnUiThread(() -> {
+                            liveCount.setTextColor(Color.parseColor("#e09a5e"));
+                            liveCount.setText("⚠ sem celular · ação #" + sent);
+                        });
+                    } else if (readers > 0) {
+                        runOnUiThread(() -> {
+                            liveCount.setTextColor(Color.parseColor("#7ee08a"));
+                            liveCount.setText("✓ enviado · ação #" + sent);
+                        });
+                    }
+                }
                 if (code == 404) {
                     // 404 = token unknown to THAT server. Show WHICH server answered
                     // so a config mismatch (wrong origin/expiry) is visible at a glance.
