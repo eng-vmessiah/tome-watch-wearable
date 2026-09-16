@@ -26,6 +26,8 @@ public final class Settings {
     public static final String K_MAP_2DOWN = "map_2down";
     public static final String K_MAP_2UP   = "map_2up";
     public static final String K_MAP_2TAP  = "map_2tap";   // action for 2x tap on screen
+    public static final String K_AUTO_SPEED  = "autoscroll_speed"; // 0..100 (50 = default pace)
+    public static final String K_BEZEL_SPEED = "bezel_speed";      // 0..100 (50 = 12px/tick)
     public static final String K_SOURCE    = "gesture_source"; // gyro | wearable
     public static final String K_SENS      = "sensitivity";    // 1..3 (low..high)
     public static final String K_SERVER    = "server";
@@ -156,8 +158,54 @@ public final class Settings {
         mapRow(box, "2× flick ↑ (rápido)", K_MAP_2UP, "prev");
         mapRow(box, "2× toque na tela", K_MAP_2TAP, "autoscroll");
 
+        box.addView(header("Velocidades (0–100)"));
+        speedRow(box, "Autoscroll", K_AUTO_SPEED, 50);
+        speedRow(box, "Bezel (scroll fino)", K_BEZEL_SPEED, 50);
+
         sc.addView(box);
         a.setContentView(sc);
+    }
+
+    private TextView pillBtn(String label) {
+        TextView t = new TextView(a);
+        t.setText(label);
+        t.setTextColor(Color.WHITE);
+        t.setTextSize(18);
+        t.setGravity(android.view.Gravity.CENTER);
+        t.setBackgroundResource(R.drawable.pill_off);
+        t.setPadding(dp(18), dp(8), dp(18), dp(8));
+        return t;
+    }
+
+    /** 0..100 with −/+ steps of 10; persists on tap (no need to leave the page). */
+    private void speedRow(LinearLayout box, String label, String key, int def) {
+        LinearLayout c = card();
+        c.addView(title(label));
+        LinearLayout row = new LinearLayout(a);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(6), 0, 0);
+        TextView minus = pillBtn("−");
+        TextView plus = pillBtn("+");
+        TextView val = new TextView(a);
+        val.setTextSize(18);
+        val.setTextColor(Color.parseColor("#c9b86e"));
+        val.setGravity(android.view.Gravity.CENTER);
+        val.setText(p.getInt(key, def) + "%");
+        minus.setOnClickListener(v -> {
+            int cur = Math.max(0, p.getInt(key, def) - 10);
+            p.edit().putInt(key, cur).apply();
+            val.setText(cur + "%");
+        });
+        plus.setOnClickListener(v -> {
+            int cur = Math.min(100, p.getInt(key, def) + 10);
+            p.edit().putInt(key, cur).apply();
+            val.setText(cur + "%");
+        });
+        row.addView(minus);
+        row.addView(val, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(plus);
+        c.addView(row);
+        box.addView(c);
     }
 
     private void mapRow(LinearLayout box, String label, String key, String def) {

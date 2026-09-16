@@ -69,8 +69,7 @@ public class MainActivity extends android.app.Activity {
     private float probeDownX, probeDownY;
     private long probeRotaryBuzzAt = 0;
     // bezel digital (rotary) -> scroll-by {px}, batched
-    private static final int ROTARY_TICK_PX = 12;   // px per bezel tick
-    private static final int ROTARY_FLUSH_MS = 100; // batching window
+    private static final int ROTARY_FLUSH_MS = 80;  // batching window (snappier first response)
     private static final boolean ROTARY_INVERT = false; // flip if the direction feels backwards
     private int rotaryTicks = 0;
     private boolean rotaryFlushScheduled = false;
@@ -205,7 +204,7 @@ public class MainActivity extends android.app.Activity {
         return super.onGenericMotionEvent(ev);
     }
 
-    /** Batch bezel ticks and ship them as one scroll-by every ~120ms. */
+    /** Batch bezel ticks and ship them as one scroll-by every ~80ms. */
     private void scheduleRotaryFlush() {
         if (rotaryFlushScheduled) return;
         rotaryFlushScheduled = true;
@@ -214,11 +213,17 @@ public class MainActivity extends android.app.Activity {
             int ticks = rotaryTicks;
             rotaryTicks = 0;
             if (ticks == 0) return;
-            int px = ticks * ROTARY_TICK_PX;
+            int px = ticks * bezelTickPx();
             if (px > 600) px = 600; else if (px < -600) px = -600;
             Log.d(TAG, "rotary flush px=" + px + " ticks=" + ticks);
             sendScrollBy(px);
         }, ROTARY_FLUSH_MS);
+    }
+
+    /** px per bezel tick from settings (0..100, 50 = 12px): 0→2, 50→12, 100→24. */
+    private int bezelTickPx() {
+        int s = getSharedPreferences("tome", MODE_PRIVATE).getInt(Settings.K_BEZEL_SPEED, 50);
+        return Math.max(2, Math.round(s * 24 / 100f));
     }
 
     /** Wrist-gesture keyevents (opt-in; One UI 8 may not deliver — sensor path is primary). */
@@ -246,8 +251,13 @@ public class MainActivity extends android.app.Activity {
                       action.equals("prev") ? "◀" :
                       action.equals("scroll-down") ? "⬇" :
                       action.equals("autoscroll") ? "∞" : "⬆";
+        String label = action;
+        if ("autoscroll".equals(action)) {
+            label = "autoscroll " + getSharedPreferences("tome", MODE_PRIVATE).getInt(Settings.K_AUTO_SPEED, 50) + "%";
+        }
+        final String labelF = label;
         runOnUiThread(() -> {
-            liveAction.setText(icon + " " + action);
+            liveAction.setText(icon + " " + labelF);
             liveCount.setTextColor(Color.parseColor("#7ee08a"));
             liveCount.setText("✓ enviado · ação #" + sent);
         });
@@ -255,7 +265,14 @@ public class MainActivity extends android.app.Activity {
 
     private void sendAction(String action) {
         buzz(20);
-        post("{\"action\":\"" + action + "\"}", action);
+        String body;
+        if ("autoscroll".equals(action)) {
+            int spd = getSharedPreferences("tome", MODE_PRIVATE).getInt(Settings.K_AUTO_SPEED, 50);
+            body = "{\"action\":\"autoscroll\",\"speed\":" + spd + "}";
+        } else {
+            body = "{\"action\":\"" + action + "\"}";
+        }
+        post(body, action);
     }
 
     /** Bezel fine-scroll — silent (no buzz/HUD), batched by the caller. */
