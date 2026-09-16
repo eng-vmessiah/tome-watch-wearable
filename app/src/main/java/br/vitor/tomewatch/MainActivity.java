@@ -70,7 +70,7 @@ public class MainActivity extends android.app.Activity {
     private long probeRotaryBuzzAt = 0;
     // bezel digital (rotary) -> scroll-by {px}, batched
     private static final int ROTARY_TICK_PX = 12;   // px per bezel tick
-    private static final int ROTARY_FLUSH_MS = 120; // batching window
+    private static final int ROTARY_FLUSH_MS = 100; // batching window
     private static final boolean ROTARY_INVERT = false; // flip if the direction feels backwards
     private int rotaryTicks = 0;
     private boolean rotaryFlushScheduled = false;
@@ -102,8 +102,8 @@ public class MainActivity extends android.app.Activity {
         map2Down = prefs.getString(Settings.K_MAP_2DOWN, "next");
         map2Up   = prefs.getString(Settings.K_MAP_2UP,   "prev");
         map2Tap  = prefs.getString(Settings.K_MAP_2TAP,  "autoscroll");
-        mapShake = prefs.getString(Settings.K_MAP_SHAKE, "autoscroll");
-        mapTwist = prefs.getString(Settings.K_MAP_TWIST, "none");
+        mapShake = prefs.getString(Settings.K_MAP_SHAKE, "none");
+        mapTwist = prefs.getString(Settings.K_MAP_TWIST, "autoscroll");
         serverUrl = prefs.getString("server", SERVER);
         sessionToken = prefs.getString("last_token", null);
         if (liveHint != null) refreshMainHint();
@@ -160,6 +160,7 @@ public class MainActivity extends android.app.Activity {
                         sendAction(mapTwist);
                     }
                 });
+        detector.setShakeEnabled(!"none".equals(mapShake));
     }
 
     private boolean inSettings = false;

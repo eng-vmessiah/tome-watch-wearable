@@ -157,8 +157,8 @@ public final class Settings {
         mapRow(box, "2× flick ↓ (rápido)", K_MAP_2DOWN, "next");
         mapRow(box, "2× flick ↑ (rápido)", K_MAP_2UP, "prev");
         mapRow(box, "2× toque na tela", K_MAP_2TAP, "autoscroll");
-        mapRow(box, "Sacudir (no ar)", K_MAP_SHAKE, "autoscroll");
-        mapRow(box, "Girar a mão (twist)", K_MAP_TWIST, "none");
+        mapRow(box, "Sacudir (no ar)", K_MAP_SHAKE, "none");
+        mapRow(box, "Girar a mão (twist)", K_MAP_TWIST, "autoscroll");
 
         sc.addView(box);
         a.setContentView(sc);

@@ -39,6 +39,7 @@ public class FlickDetector {
 
     private final SensorManager sm;
     private final Callback cb;
+    private boolean shakeEnabled = true;
     private long lastFire = 0;
     private long lastTwistFire = 0;
     private long lastShakeFire = 0;
@@ -67,6 +68,12 @@ public class FlickDetector {
         sm.unregisterListener(listener);
     }
 
+    /** When disabled, the shake path is not tracked at all — it must never
+     *  suppress flicks (running arm-swing would otherwise eat them). */
+    public void setShakeEnabled(boolean enabled) {
+        shakeEnabled = enabled;
+    }
+
     private final SensorEventListener listener = new SensorEventListener() {
         private long lastLog = 0;
 
@@ -81,37 +88,41 @@ public class FlickDetector {
             float ax = Math.abs(x), ay = Math.abs(y), az = Math.abs(z);
 
             // ---- SHAKE: rapid direction alternation (dominant axis) ----
-            float dom = (ax >= ay && ax >= az) ? x : (ay >= az ? y : z);
-            if (Math.abs(dom) > SHAKE_MAG) {
-                int sgn = dom > 0 ? 1 : -1;
-                if (shakeSign == 0 || sgn == shakeSign) {
-                    shakeSign = sgn;
-                    shakeLastAt = now;
-                } else if (now - shakeLastAt <= SHAKE_WINDOW_MS) {
-                    shakeChanges++;
-                    shakeLastAt = now;
-                    shakeSign = sgn;
-                    if (shakeChanges >= SHAKE_CHANGES && now - lastShakeFire >= SHAKE_COOLDOWN_MS) {
-                        lastShakeFire = now;
-                        shakeChanges = 0;
-                        shakeSign = 0;
-                        lastFire = now; // eat flicks right after a shake
-                        cb.onShake();
-                        return;
+            // Only tracked when shake is mapped — disabled, it must not
+            // suppress flicks (running arm-swing must never eat them).
+            if (shakeEnabled) {
+                float dom = (ax >= ay && ax >= az) ? x : (ay >= az ? y : z);
+                if (Math.abs(dom) > SHAKE_MAG) {
+                    int sgn = dom > 0 ? 1 : -1;
+                    if (shakeSign == 0 || sgn == shakeSign) {
+                        shakeSign = sgn;
+                        shakeLastAt = now;
+                    } else if (now - shakeLastAt <= SHAKE_WINDOW_MS) {
+                        shakeChanges++;
+                        shakeLastAt = now;
+                        shakeSign = sgn;
+                        if (shakeChanges >= SHAKE_CHANGES && now - lastShakeFire >= SHAKE_COOLDOWN_MS) {
+                            lastShakeFire = now;
+                            shakeChanges = 0;
+                            shakeSign = 0;
+                            lastFire = now; // eat flicks right after a shake
+                            cb.onShake();
+                            return;
+                        }
+                    } else {
+                        shakeChanges = 1;
+                        shakeLastAt = now;
+                        shakeSign = sgn;
                     }
-                } else {
-                    shakeChanges = 1;
-                    shakeLastAt = now;
-                    shakeSign = sgn;
+                } else if (now - shakeLastAt > SHAKE_WINDOW_MS) {
+                    shakeChanges = 0;
+                    shakeSign = 0;
                 }
-            } else if (now - shakeLastAt > SHAKE_WINDOW_MS) {
-                shakeChanges = 0;
-                shakeSign = 0;
-            }
 
-            // suppress flicks while a shake is brewing or just fired
-            if (shakeChanges >= 2) return;
-            if (now - lastShakeFire < 800) return;
+                // suppress flicks while a shake is brewing or just fired
+                if (shakeChanges >= 2) return;
+                if (now - lastShakeFire < 800) return;
+            }
 
             // ---- TWIST: deliberate z-axis spike ("turn the key") ----
             if (az > magZ && az > ax * 1.4f && az > ay * 1.4f) {
