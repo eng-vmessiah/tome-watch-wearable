@@ -26,6 +26,8 @@ public final class Settings {
     public static final String K_MAP_2DOWN = "map_2down";
     public static final String K_MAP_2UP   = "map_2up";
     public static final String K_MAP_2TAP  = "map_2tap";   // action for 2x tap on screen
+    public static final String K_MAP_SHAKE = "map_shake";  // action for the air shake gesture
+    public static final String K_MAP_TWIST = "map_twist";  // action for the hand twist (rotate)
     public static final String K_SOURCE    = "gesture_source"; // gyro | wearable
     public static final String K_SENS      = "sensitivity";    // 1..3 (low..high)
     public static final String K_SERVER    = "server";
@@ -155,6 +157,8 @@ public final class Settings {
         mapRow(box, "2× flick ↓ (rápido)", K_MAP_2DOWN, "next");
         mapRow(box, "2× flick ↑ (rápido)", K_MAP_2UP, "prev");
         mapRow(box, "2× toque na tela", K_MAP_2TAP, "autoscroll");
+        mapRow(box, "Sacudir (no ar)", K_MAP_SHAKE, "autoscroll");
+        mapRow(box, "Girar a mão (twist)", K_MAP_TWIST, "none");
 
         sc.addView(box);
         a.setContentView(sc);

@@ -52,7 +52,7 @@ public class MainActivity extends android.app.Activity {
 
     private OkHttpClient http;
     private TextView status;
-    private String mapDown, mapUp, map2Down, map2Up, map2Tap;
+    private String mapDown, mapUp, map2Down, map2Up, map2Tap, mapShake, mapTwist;
     private String serverUrl;
     private String sessionToken = null;    // current session (per spec: token via create; NOT the tokenVal settings label)
     private boolean inSession = false;
@@ -102,6 +102,8 @@ public class MainActivity extends android.app.Activity {
         map2Down = prefs.getString(Settings.K_MAP_2DOWN, "next");
         map2Up   = prefs.getString(Settings.K_MAP_2UP,   "prev");
         map2Tap  = prefs.getString(Settings.K_MAP_2TAP,  "autoscroll");
+        mapShake = prefs.getString(Settings.K_MAP_SHAKE, "autoscroll");
+        mapTwist = prefs.getString(Settings.K_MAP_TWIST, "none");
         serverUrl = prefs.getString("server", SERVER);
         sessionToken = prefs.getString("last_token", null);
         if (liveHint != null) refreshMainHint();
@@ -122,26 +124,40 @@ public class MainActivity extends android.app.Activity {
         gestureSource = prefs.getString(Settings.K_SOURCE, "gyro");
 
         detector = new FlickDetector((SensorManager) getSystemService(Context.SENSOR_SERVICE),
-                flick -> {
-                    long now = android.os.SystemClock.elapsedRealtime();
-                    boolean isDown = (flick == FlickDetector.Flick.DOWN);
-                    boolean isUp   = (flick == FlickDetector.Flick.UP);
-                    String action;
-                    if (isDown || isUp) {
-                        boolean sameAsLast = (isDown && lastFlickWasDown) || (isUp && lastFlickWasUp);
-                        boolean withinWindow = (now - lastFlickAt) < 1000;
-                        if (sameAsLast && withinWindow) {
-                            action = isDown ? map2Down : map2Up;
-                            lastFlickAt = 0; // consume pair
-                        } else {
-                            action = isDown ? mapDown : mapUp;
-                            lastFlickWasDown = isDown; lastFlickWasUp = isUp;
-                            lastFlickAt = now;
+                new FlickDetector.Callback() {
+                    @Override public void onFlick(FlickDetector.Flick flick) {
+                        long now = android.os.SystemClock.elapsedRealtime();
+                        boolean isDown = (flick == FlickDetector.Flick.DOWN);
+                        boolean isUp   = (flick == FlickDetector.Flick.UP);
+                        String action;
+                        if (isDown || isUp) {
+                            boolean sameAsLast = (isDown && lastFlickWasDown) || (isUp && lastFlickWasUp);
+                            boolean withinWindow = (now - lastFlickAt) < 1000;
+                            if (sameAsLast && withinWindow) {
+                                action = isDown ? map2Down : map2Up;
+                                lastFlickAt = 0; // consume pair
+                            } else {
+                                action = isDown ? mapDown : mapUp;
+                                lastFlickWasDown = isDown; lastFlickWasUp = isUp;
+                                lastFlickAt = now;
+                            }
+                            if ("none".equals(action)) return; // gesture disabled
+                            Log.d(TAG, "FLICK " + flick + " -> " + action);
+                            updateUi(action);
+                            sendAction(action);
                         }
-                        if ("none".equals(action)) return; // gesture disabled
-                        Log.d(TAG, "FLICK " + flick + " -> " + action);
-                        updateUi(action);
-                        sendAction(action);
+                    }
+                    @Override public void onShake() {
+                        Log.d(TAG, "SHAKE -> " + mapShake);
+                        if ("none".equals(mapShake)) return;
+                        updateUi(mapShake);
+                        sendAction(mapShake);
+                    }
+                    @Override public void onTwist(int dir) {
+                        Log.d(TAG, "TWIST " + (dir > 0 ? "+" : "-") + " -> " + mapTwist);
+                        if ("none".equals(mapTwist)) return;
+                        updateUi(mapTwist);
+                        sendAction(mapTwist);
                     }
                 });
     }
@@ -240,7 +256,8 @@ public class MainActivity extends android.app.Activity {
         sent++;
         String icon = action.equals("next") ? "▶" :
                       action.equals("prev") ? "◀" :
-                      action.equals("scroll-down") ? "⬇" : "⬆";
+                      action.equals("scroll-down") ? "⬇" :
+                      action.equals("autoscroll") ? "∞" : "⬆";
         runOnUiThread(() -> {
             liveAction.setText(icon + " " + action);
             liveCount.setTextColor(Color.parseColor("#7ee08a"));
