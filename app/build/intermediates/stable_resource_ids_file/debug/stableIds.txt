@@ -1,6 +1,0 @@
-br.vitor.tomewatch:string/app_name = 0x7f030000
-br.vitor.tomewatch:mipmap/ic_launcher = 0x7f020000
-br.vitor.tomewatch:drawable/pill_on = 0x7f010003
-br.vitor.tomewatch:drawable/pill_off = 0x7f010002
-br.vitor.tomewatch:drawable/card_on = 0x7f010001
-br.vitor.tomewatch:drawable/card_off = 0x7f010000
