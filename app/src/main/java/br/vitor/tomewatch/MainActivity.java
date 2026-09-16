@@ -19,6 +19,10 @@ import android.app.AlertDialog;
 import android.text.TextUtils;
 import android.view.View;
 import android.graphics.Color;
+import android.view.MotionEvent;
+import android.view.InputDevice;
+import android.view.GestureDetector;
+import android.view.ScaleGestureDetector;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -48,7 +52,7 @@ public class MainActivity extends android.app.Activity {
 
     private OkHttpClient http;
     private TextView status;
-    private String mapDown, mapUp, map2Down, map2Up;
+    private String mapDown, mapUp, map2Down, map2Up, map2Tap;
     private String serverUrl;
     private String sessionToken = null;    // current session (per spec: token via create; NOT the tokenVal settings label)
     private boolean inSession = false;
@@ -59,16 +63,45 @@ public class MainActivity extends android.app.Activity {
     private boolean lastFlickWasDown = false, lastFlickWasUp = false;
     private long lastFlickAt = 0;
 
+    // ==== GESTURE PROBE (diagnóstico — mapear o que o Ultra entrega hoje) ====
+    private GestureDetector probeGesture;
+    private ScaleGestureDetector probeScale;
+    private float probeDownX, probeDownY;
+    private long probeRotaryBuzzAt = 0;
+    // bezel digital (rotary) -> scroll-by {px}, batched
+    private static final int ROTARY_TICK_PX = 12;   // px per bezel tick
+    private static final int ROTARY_FLUSH_MS = 120; // batching window
+    private static final boolean ROTARY_INVERT = false; // flip if the direction feels backwards
+    private int rotaryTicks = 0;
+    private boolean rotaryFlushScheduled = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         buildMainScreen();
+
+        probeGesture = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override public boolean onDown(MotionEvent e) { return true; }
+            @Override public boolean onSingleTapUp(MotionEvent e) { Log.d(TAG, "PROBE tap"); return true; }
+            @Override public boolean onDoubleTap(MotionEvent e) {
+                Log.d(TAG, "double-tap -> " + map2Tap);
+                if (!"none".equals(map2Tap)) { updateUi(map2Tap); sendAction(map2Tap); }
+                return true;
+            }
+        });
+        probeScale = new ScaleGestureDetector(this, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            @Override public void onScaleEnd(ScaleGestureDetector d) {
+                Log.d(TAG, "PROBE pinch factor=" + d.getScaleFactor());
+                buzz(18);
+            }
+        });
 
         SharedPreferences prefs = getSharedPreferences("tome", MODE_PRIVATE);
         mapDown  = prefs.getString(Settings.K_MAP_DOWN,  "scroll-down");
         mapUp    = prefs.getString(Settings.K_MAP_UP,    "scroll-up");
         map2Down = prefs.getString(Settings.K_MAP_2DOWN, "next");
         map2Up   = prefs.getString(Settings.K_MAP_2UP,   "prev");
+        map2Tap  = prefs.getString(Settings.K_MAP_2TAP,  "autoscroll");
         serverUrl = prefs.getString("server", SERVER);
         sessionToken = prefs.getString("last_token", null);
         if (liveHint != null) refreshMainHint();
@@ -135,9 +168,59 @@ public class MainActivity extends android.app.Activity {
         if (!"wearable".equals(gestureSource)) detector.start();
     }
 
+    // ==== probe overrides (não consomem eventos; só logam) ====
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (probeGesture != null) probeGesture.onTouchEvent(ev);
+        if (probeScale != null) probeScale.onTouchEvent(ev);
+        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            probeDownX = ev.getX(); probeDownY = ev.getY();
+        } else if (ev.getActionMasked() == MotionEvent.ACTION_UP) {
+            float dy = ev.getY() - probeDownY, dx = ev.getX() - probeDownX;
+            if (Math.abs(dy) > 24 || Math.abs(dx) > 24) {
+                Log.d(TAG, "PROBE drag dx=" + Math.round(dx) + " dy=" + Math.round(dy));
+                buzz(12);
+            }
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    @Override
+    public boolean onGenericMotionEvent(MotionEvent ev) {
+        if (ev.isFromSource(InputDevice.SOURCE_ROTARY_ENCODER)
+                && ev.getAction() == MotionEvent.ACTION_SCROLL) {
+            // settings/session screens keep native bezel scrolling
+            if (inSettings || inSession) return super.onGenericMotionEvent(ev);
+            float d = ev.getAxisValue(MotionEvent.AXIS_SCROLL);
+            if (d == 0) return super.onGenericMotionEvent(ev);
+            int dir = (d > 0 ? 1 : -1) * (ROTARY_INVERT ? -1 : 1);
+            rotaryTicks += dir;
+            scheduleRotaryFlush();
+            return true; // consumed — the bezel drives the reader, not this screen
+        }
+        return super.onGenericMotionEvent(ev);
+    }
+
+    /** Batch bezel ticks and ship them as one scroll-by every ~120ms. */
+    private void scheduleRotaryFlush() {
+        if (rotaryFlushScheduled) return;
+        rotaryFlushScheduled = true;
+        mainScreen.postDelayed(() -> {
+            rotaryFlushScheduled = false;
+            int ticks = rotaryTicks;
+            rotaryTicks = 0;
+            if (ticks == 0) return;
+            int px = ticks * ROTARY_TICK_PX;
+            if (px > 600) px = 600; else if (px < -600) px = -600;
+            Log.d(TAG, "rotary flush px=" + px + " ticks=" + ticks);
+            sendScrollBy(px);
+        }, ROTARY_FLUSH_MS);
+    }
+
     /** Wrist-gesture keyevents (opt-in; One UI 8 may not deliver — sensor path is primary). */
     @Override
     public boolean onKeyDown(int keyCode, android.view.KeyEvent event) {
+        Log.d(TAG, "PROBE key " + keyCode);
         if ("wearable".equals(gestureSource)) {
             String fromKey = null;
             if (keyCode == android.view.KeyEvent.KEYCODE_NAVIGATE_NEXT) fromKey = "next";
@@ -167,7 +250,16 @@ public class MainActivity extends android.app.Activity {
 
     private void sendAction(String action) {
         buzz(20);
-        String body = "{\"action\":\"" + action + "\"}";
+        post("{\"action\":\"" + action + "\"}", action);
+    }
+
+    /** Bezel fine-scroll — silent (no buzz/HUD), batched by the caller. */
+    private void sendScrollBy(int px) {
+        post("{\"action\":\"scroll-by\",\"px\":" + px + "}", "scroll-by");
+    }
+
+    private void post(String body, String tag) {
+        if (sessionToken == null) return;
         Request req = new Request.Builder()
                 .url(serverUrl + "/api/watch/" + sessionToken)
                 .header("Authorization", "Bearer " + sessionToken)
@@ -195,9 +287,16 @@ public class MainActivity extends android.app.Activity {
                 }
                 res.close();
                 Log.d(TAG, "POST RESP " + code + " " + bodyStr);
+                if (code == 200 && "scroll-by".equals(tag)) return; // bezel: no HUD updates
+                if (code == 400 && !"scroll-by".equals(tag)) {
+                    runOnUiThread(() -> {
+                        liveCount.setTextColor(Color.parseColor("#e09a5e"));
+                        liveCount.setText("⚠ ação não aceita pelo server");
+                    });
+                }
                 if (code == 200) {
-                    // readers: how many readers the plugin broadcast to (0 = no phone
-                    // has the reader open). -1/absent = older plugin: keep the optimistic ✓.
+                    // readers: how many readers the plugin broadcast to (0 = no
+                    // device has the reader open). -1/absent = older plugin: keep ✓.
                     int readers = -1;
                     try {
                         JSONObject o = new JSONObject(bodyStr);
@@ -206,7 +305,7 @@ public class MainActivity extends android.app.Activity {
                     if (readers == 0) {
                         runOnUiThread(() -> {
                             liveCount.setTextColor(Color.parseColor("#e09a5e"));
-                            liveCount.setText("⚠ sem celular · ação #" + sent);
+                            liveCount.setText("⚠ sem dispositivo · ação #" + sent);
                         });
                     } else if (readers > 0) {
                         runOnUiThread(() -> {
@@ -345,7 +444,9 @@ public class MainActivity extends android.app.Activity {
         String arrowD = d.equals("scroll-down") ? "↓" : d.equals("scroll-up") ? "↑"
                       : d.equals("next") ? "▶" : d.equals("prev") ? "◀" : "—";
         String pp = d2.startsWith("scroll") ? "rola " + (d2.equals("scroll-down") ? "↓" : "↑") : d2;
-        liveHint.setText("1x↓ " + arrowD + "  •  2x↓ " + pp + "\nsegura p/ config");
+        String tap = p.getString(Settings.K_MAP_2TAP, "autoscroll");
+        String tapPart = "none".equals(tap) ? "" : "  •  2×toque " + ("autoscroll".equals(tap) ? "auto" : tap);
+        liveHint.setText("1x↓ " + arrowD + "  •  2x↓ " + pp + tapPart + "\nsegura p/ config");
     }
 
     // ============ SESSION FLOW ============
