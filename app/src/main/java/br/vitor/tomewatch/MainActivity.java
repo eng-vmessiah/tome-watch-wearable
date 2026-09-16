@@ -83,6 +83,8 @@ public class MainActivity extends android.app.Activity {
             @Override public boolean onDown(MotionEvent e) { return true; }
             @Override public boolean onSingleTapUp(MotionEvent e) { Log.d(TAG, "PROBE tap"); return true; }
             @Override public boolean onDoubleTap(MotionEvent e) {
+                // UI screens (settings / session-pairing) must never dispatch actions
+                if (inSettings || inSession) { Log.d(TAG, "double-tap (ignorado em tela de UI)"); return true; }
                 Log.d(TAG, "double-tap -> " + map2Tap);
                 if (!"none".equals(map2Tap)) { updateUi(map2Tap); sendAction(map2Tap); }
                 return true;
@@ -91,7 +93,7 @@ public class MainActivity extends android.app.Activity {
         probeScale = new ScaleGestureDetector(this, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
             @Override public void onScaleEnd(ScaleGestureDetector d) {
                 Log.d(TAG, "PROBE pinch factor=" + d.getScaleFactor());
-                buzz(18);
+                if (!inSettings && !inSession) buzz(18);
             }
         });
 
@@ -167,7 +169,7 @@ public class MainActivity extends android.app.Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        if (inSettings) return;
+        if (inSettings || inSession) return;
         if (!"wearable".equals(gestureSource)) detector.start();
     }
 
@@ -182,7 +184,7 @@ public class MainActivity extends android.app.Activity {
             float dy = ev.getY() - probeDownY, dx = ev.getX() - probeDownX;
             if (Math.abs(dy) > 24 || Math.abs(dx) > 24) {
                 Log.d(TAG, "PROBE drag dx=" + Math.round(dx) + " dy=" + Math.round(dy));
-                buzz(12);
+                if (!inSettings && !inSession) buzz(12);
             }
         }
         return super.dispatchTouchEvent(ev);
